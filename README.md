@@ -34,6 +34,7 @@ NixOS | [sioyek](https://search.nixos.org/packages?channel=unstable&show=sioyek&
 openSUSE | [Publishing](https://build.opensuse.org/package/show/Publishing/sioyek) | [@uncomfyhalomacro](https://github.com/uncomfyhalomacro)
 openSUSE | [Factory](https://build.opensuse.org/package/show/openSUSE:Factory/sioyek) | [@uncomfyhalomacro](https://github.com/uncomfyhalomacro)
 Ubuntu | [sioyek](https://packages.ubuntu.com/sioyek) | [@viccie30](https://github.com/viccie30)
+Guix | [sioyek](https://hpc.guix.info/package/sioyek) | [@guix-community](https://codeberg.org/org/guix/members)
 
 
 ## Documentation
