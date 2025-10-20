@@ -127,7 +127,7 @@ extern bool SHOULD_HIGHLIGHT_LINKS;
 extern float SCROLL_VIEW_SENSITIVITY;
 extern std::wstring STATUS_BAR_FORMAT;
 extern bool INVERTED_HORIZONTAL_SCROLLING;
-extern float HORIZONTAL_SCROLL_ANGLE_THRESHOLD;
+extern float HORIZONTAL_SCROLL_BAND_WIDTH;
 extern bool TOC_JUMP_ALIGN_TOP;
 extern bool AUTOCENTER_VISUAL_SCROLL;
 extern bool ALPHABETIC_LINK_TAGS;
@@ -1848,24 +1848,34 @@ void MainWidget::wheelEvent(QWheelEvent* wevent) {
     }
 
     // General scrolling (works with or without modifiers, but no zoom/gestures with modifiers)
-    // Enhanced angle-based scrolling detection (like macOS Preview)
+    // Enhanced vertical band + direct tracking system
     float total_magnitude = std::sqrt(delta_x * delta_x + delta_y * delta_y);
     
     if (total_magnitude > 0.01f) {
-        // Calculate the angle of the gesture in degrees
-        float angle_radians = std::atan2(std::abs(delta_x), std::abs(delta_y));
-        float angle_degrees = angle_radians * 180.0f / M_PI;
+        // Check if horizontal movement escapes the vertical band
+        // Use configurable band width (default allows some horizontal drift)
+        bool escapes_vertical_band = std::abs(delta_x) > HORIZONTAL_SCROLL_BAND_WIDTH;
         
-        // Wider horizontal detection range (like macOS Preview)
-        // Horizontal if angle is > threshold degrees from vertical (configurable)
-        bool is_primarily_horizontal = angle_degrees > HORIZONTAL_SCROLL_ANGLE_THRESHOLD;
-        
-        if (is_primarily_horizontal) {
-            // Treat as horizontal scrolling (even with some vertical component)
-            move_horizontal(-72.0f * move_x);
+        if (escapes_vertical_band) {
+            // Direct 1:1 finger tracking mode - exact diagonal movement
+            if (std::abs(delta_x) > 0.01f) {
+                move_horizontal(-72.0f * move_x);
+            }
+            if (std::abs(delta_y) > 0.01f) {
+                if (is_visual_mark_mode) {
+                    if (delta_y > 0) {
+                        command = command_manager->get_command_with_name("move_visual_mark_up");
+                    } else {
+                        command = command_manager->get_command_with_name("move_visual_mark_down");
+                    }
+                } else {
+                    move_vertical(-72.0f * move_y);
+                    update_scrollbar();
+                }
+            }
             return;
         } else {
-            // Treat as vertical scrolling
+            // Within vertical band - pure vertical scrolling only
             if (std::abs(delta_y) > 0.01f) {
                 if (is_visual_mark_mode) {
                     if (delta_y > 0) {
@@ -1879,6 +1889,7 @@ void MainWidget::wheelEvent(QWheelEvent* wevent) {
                     return;
                 }
             }
+            // Ignore horizontal movement within the vertical band
         }
     }
 
