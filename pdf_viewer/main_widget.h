@@ -15,6 +15,7 @@
 #include <qbytearray.h>
 #include <qdrag.h>
 #include <qscrollbar.h>
+#include <qgesture.h>
 
 #include <mupdf/fitz.h>
 #include "document_view.h"
@@ -356,6 +357,8 @@ public:
 	void mousePressEvent(QMouseEvent* mevent) override;
 	void mouseDoubleClickEvent(QMouseEvent* mevent) override;
 	void wheelEvent(QWheelEvent* wevent) override;
+	bool gestureEvent(QGestureEvent* event);
+	bool event(QEvent* event) override;
 
 };
 

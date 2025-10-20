@@ -8,6 +8,8 @@
 #include <optional>
 #include <memory>
 #include <cctype>
+#include <algorithm>
+#include <cmath>
 
 
 #include <qscrollarea.h>
@@ -350,6 +352,9 @@ MainWidget::MainWidget(fz_context* mupdf_context,
     setMouseTracking(true);
     setAcceptDrops(true);
     setAttribute(Qt::WA_DeleteOnClose);
+    
+    // Enable gesture recognition for Mac trackpad pinch-to-zoom
+    grabGesture(Qt::PinchGesture);
 
 
     inverse_search_command = INVERSE_SEARCH_COMMAND;
@@ -1745,25 +1750,37 @@ void MainWidget::mousePressEvent(QMouseEvent* mevent) {
 }
 
 void MainWidget::wheelEvent(QWheelEvent* wevent) {
-
     std::unique_ptr<Command> command = nullptr;
-    //bool is_touchpad = wevent->source() == Qt::MouseEventSource::MouseEventSynthesizedBySystem;
-    //bool is_touchpad = true;
+    
+    // Improved trackpad detection
+    bool is_trackpad = false;
+#ifdef SIOYEK_QT6
+    is_trackpad = (wevent->source() == Qt::MouseEventSynthesizedBySystem);
+#else
+    // For Qt5, we assume trackpad if we get pixel deltas (more precise)
+    is_trackpad = !wevent->pixelDelta().isNull();
+#endif
+    
+    // Enhanced sensitivity handling for trackpad vs mouse wheel
     float vertical_move_amount = VERTICAL_MOVE_AMOUNT * TOUCHPAD_SENSITIVITY;
     float horizontal_move_amount = HORIZONTAL_MOVE_AMOUNT * TOUCHPAD_SENSITIVITY;
-
-    //if (is_touchpad) {
-    //	vertical_move_amount *= TOUCHPAD_SENSITIVITY;
-    //	horizontal_move_amount *= TOUCHPAD_SENSITIVITY;
-    //}
+    
+    if (is_trackpad) {
+        // Apply additional trackpad sensitivity
+        vertical_move_amount *= 0.5f;  // Make trackpad less sensitive for better control
+        horizontal_move_amount *= 0.5f;
+    }
+    
     if (main_document_view_has_document()) {
         main_document_view->disable_auto_resize_mode();
     }
-
-    bool is_control_pressed = QApplication::queryKeyboardModifiers().testFlag(Qt::ControlModifier) ||
-        QApplication::queryKeyboardModifiers().testFlag(Qt::MetaModifier);
-
-    bool is_shift_pressed = QApplication::queryKeyboardModifiers().testFlag(Qt::ShiftModifier);
+    
+    // Check modifier keys - enhanced to include command key explicitly
+    Qt::KeyboardModifiers modifiers = QApplication::queryKeyboardModifiers();
+    bool is_control_pressed = modifiers.testFlag(Qt::ControlModifier);
+    bool is_meta_pressed = modifiers.testFlag(Qt::MetaModifier);  // Command key on Mac
+    bool is_shift_pressed = modifiers.testFlag(Qt::ShiftModifier);
+    
     bool is_visual_mark_mode = opengl_widget->get_should_draw_vertical_line() && visual_scroll_mode;
 
 
@@ -1774,91 +1791,87 @@ void MainWidget::wheelEvent(QWheelEvent* wevent) {
     int x = wevent->pos().x();
     int y = wevent->pos().y();
 #endif
-
     WindowPos mouse_window_pos = { x, y };
     auto [normal_x, normal_y] = main_document_view->window_to_normalized_window_pos(mouse_window_pos);
 
+    // Enhanced delta calculation supporting both wheel and trackpad
+    float delta_x = 0.0f;
+    float delta_y = 0.0f;
+    
 #ifdef SIOYEK_QT6
-	int num_repeats = abs(wevent->angleDelta().y() / 120);
-	float num_repeats_f = abs(wevent->angleDelta().y() / 120.0);
+    if (is_trackpad && !wevent->pixelDelta().isNull()) {
+        // Use pixel deltas for trackpad (more precise)
+        delta_x = wevent->pixelDelta().x();
+        delta_y = wevent->pixelDelta().y();
+    } else {
+        // Use angle deltas for mouse wheel
+        delta_x = wevent->angleDelta().x() / 120.0f;
+        delta_y = wevent->angleDelta().y() / 120.0f;
+    }
 #else
-	int num_repeats = abs(wevent->delta() / 120);
-	float num_repeats_f = abs(wevent->delta() / 120.0);
+    if (is_trackpad && !wevent->pixelDelta().isNull()) {
+        delta_x = wevent->pixelDelta().x();
+        delta_y = wevent->pixelDelta().y();
+    } else {
+        delta_x = wevent->angleDelta().x() / 120.0f;
+        delta_y = wevent->angleDelta().y() / 120.0f;
+    }
 #endif
 
-    if (num_repeats == 0) {
-        num_repeats = 1;
-    }
+    // Calculate movement amounts with proper scaling
+    float move_y = delta_y * vertical_move_amount;
+    float move_x = delta_x * horizontal_move_amount;
+    
+    // Apply horizontal scrolling inversion if configured
+    float inverse_factor = INVERTED_HORIZONTAL_SCROLLING ? -1.0f : 1.0f;
+    move_x *= inverse_factor;
 
-    if ((!is_control_pressed) && (!is_shift_pressed)) {
-        if (opengl_widget->is_window_point_in_overview({ normal_x, normal_y })) {
-            if (wevent->angleDelta().y() > 0) {
-                scroll_overview(-1);
-            }
-            if (wevent->angleDelta().y() < 0) {
-                scroll_overview(1);
-            }
-            validate_render();
+    // Handle overview scrolling (works with or without modifiers)
+    if (opengl_widget->is_window_point_in_overview({ normal_x, normal_y })) {
+        if (delta_y > 0) {
+            scroll_overview(-1);
+        } else if (delta_y < 0) {
+            scroll_overview(1);
         }
-        else {
-
-            if (wevent->angleDelta().y() > 0) {
-
-                if (is_visual_mark_mode) {
-                    command = command_manager->get_command_with_name("move_visual_mark_up");
-                }
-                else {
-                    move_vertical(-72.0f * vertical_move_amount * num_repeats_f);
-					update_scrollbar();
-                    return;
-                }
-            }
-            if (wevent->angleDelta().y() < 0) {
-
-                if (is_visual_mark_mode) {
-                    command = command_manager->get_command_with_name("move_visual_mark_down");
-                }
-                else {
-                    move_vertical(72.0f * vertical_move_amount * num_repeats_f);
-					update_scrollbar();
-                    return;
-                }
-            }
-
-			float inverse_factor = INVERTED_HORIZONTAL_SCROLLING ? -1.0f : 1.0f;
-
-            if (wevent->angleDelta().x() > 0) {
-                move_horizontal(-72.0f * horizontal_move_amount * num_repeats_f * inverse_factor);
-                return;
-            }
-            if (wevent->angleDelta().x() < 0) {
-                move_horizontal(72.0f * horizontal_move_amount * num_repeats_f * inverse_factor);
-                return;
-            }
-        }
-    }
-
-    if (is_control_pressed) {
-        float zoom_factor = 1.0f + num_repeats_f * (ZOOM_INC_FACTOR - 1.0f);
-        zoom(mouse_window_pos, zoom_factor, wevent->angleDelta().y() > 0);
+        validate_render();
         return;
     }
-    if (is_shift_pressed) {
-        float inverse_factor = INVERTED_HORIZONTAL_SCROLLING ? -1.0f : 1.0f;
 
-        if (wevent->angleDelta().y() > 0) {
-            move_horizontal(-72.0f * horizontal_move_amount * num_repeats_f * inverse_factor);
+    // Handle modifier key combinations first (before general scrolling)
+    if (is_shift_pressed && !is_control_pressed && !is_meta_pressed) {
+        // Shift: convert vertical scroll to horizontal
+        if (std::abs(delta_y) > 0.01f) {
+            move_horizontal(-72.0f * delta_y * horizontal_move_amount * inverse_factor);
             return;
         }
-        if (wevent->angleDelta().y() < 0) {
-            move_horizontal(72.0f * horizontal_move_amount * num_repeats_f * inverse_factor);
-            return;
-        }
-
     }
 
+    // General scrolling (works with or without modifiers, but no zoom/gestures with modifiers)
+    // Main document scrolling
+    if (std::abs(delta_y) > 0.01f) {  // Vertical scrolling
+        if (is_visual_mark_mode) {
+            if (delta_y > 0) {
+                command = command_manager->get_command_with_name("move_visual_mark_up");
+            } else {
+                command = command_manager->get_command_with_name("move_visual_mark_down");
+            }
+        } else {
+            move_vertical(-72.0f * move_y);
+            update_scrollbar();
+            return;
+        }
+    }
+    
+    // Enhanced horizontal scrolling support (for diagonal trackpad movements)
+    if (std::abs(delta_x) > 0.01f) {  // Horizontal scrolling
+        move_horizontal(-72.0f * move_x);
+        return;
+    }
+
+    // Note: Zoom is intentionally disabled when ANY modifier is pressed as requested
+
     if (command) {
-        //handle_command(command, num_repeats);
+        int num_repeats = std::max(1, static_cast<int>(std::abs(delta_y)));
         command->set_num_repeats(num_repeats);
         command->run(this);
     }
@@ -4145,4 +4158,68 @@ int MainWidget::num_visible_links() {
 	std::vector<std::pair<int, fz_link*>> visible_page_links;
     main_document_view->get_visible_links(visible_page_links);
     return visible_page_links.size();
+}
+
+bool MainWidget::event(QEvent* event) {
+    if (event->type() == QEvent::Gesture) {
+        return gestureEvent(static_cast<QGestureEvent*>(event));
+    }
+    return QWidget::event(event);
+}
+
+bool MainWidget::gestureEvent(QGestureEvent* event) {
+    // Check for modifier keys - disable gestures when any modifier is pressed
+    Qt::KeyboardModifiers modifiers = QApplication::queryKeyboardModifiers();
+    bool has_modifier = modifiers.testFlag(Qt::ControlModifier) || 
+                       modifiers.testFlag(Qt::MetaModifier) || 
+                       modifiers.testFlag(Qt::ShiftModifier);
+    
+    // Disable all gesture handling when modifier keys are pressed (as requested)
+    if (has_modifier) {
+        return false;
+    }
+
+    if (QGesture* pinch = event->gesture(Qt::PinchGesture)) {
+        QPinchGesture* pinchGesture = static_cast<QPinchGesture*>(pinch);
+        
+        if (!main_document_view_has_document()) {
+            return false;
+        }
+
+        // Get the center point of the pinch gesture for zoom focal point
+        QPointF center = pinchGesture->centerPoint();
+        WindowPos zoom_center = { static_cast<int>(center.x()), static_cast<int>(center.y()) };
+
+        if (pinchGesture->state() == Qt::GestureStarted) {
+            // Store initial zoom level for reference
+            main_document_view->disable_auto_resize_mode();
+        } 
+        else if (pinchGesture->state() == Qt::GestureUpdated) {
+            // Apply zoom based on scale factor
+            qreal scaleFactor = pinchGesture->scaleFactor();
+            
+            // Apply some smoothing to prevent too rapid zooming
+            if (scaleFactor > 0.1 && scaleFactor < 10.0 && scaleFactor != 1.0) {
+                // Determine zoom direction: scaleFactor > 1.0 = zoom in, < 1.0 = zoom out
+                bool zoom_in = scaleFactor > 1.0;
+                
+                // Calculate zoom factor magnitude
+                float zoom_factor;
+                if (zoom_in) {
+                    // Pinch out: zoom in
+                    zoom_factor = static_cast<float>(scaleFactor);
+                } else {
+                    // Pinch in: zoom out - invert the scale factor
+                    zoom_factor = static_cast<float>(1.0 / scaleFactor);
+                }
+                
+                // Apply zoom with the pinch center as focal point
+                zoom(zoom_center, zoom_factor, zoom_in);
+            }
+        }
+        
+        return true;
+    }
+    
+    return false;
 }

@@ -2,29 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>sioyek</string>
-	<key>CFBundleExecutable</key>
-	<string>@EXECUTABLE@</string>
-	<key>CFBundleIconFile</key>
-	<string>@ICON@</string>
-	<key>CFBundleIdentifier</key>
-	<string>info.sioyek.sioyek</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleShortVersionString</key>
-	<string>@SHORT_VERSION@</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>10.15</string>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
-	<key>NSSupportsAutomaticGraphicsSwitching</key>
-	<true/>
 	<key>CFBundleDocumentTypes</key>
-    <array>
-        <dict>
+	<array>
+		<dict>
 			<key>CFBundleTypeName</key>
 			<string>PDF Document</string>
 			<key>CFBundleTypeRole</key>
@@ -36,6 +16,31 @@
 				<string>com.adobe.pdf</string>
 			</array>
 		</dict>
-    </array>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>@EXECUTABLE@</string>
+	<key>CFBundleIconFile</key>
+	<string>@ICON@</string>
+	<key>CFBundleIdentifier</key>
+	<string>info.sioyek.sioyek</string>
+	<key>CFBundleName</key>
+	<string>sioyek</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@SHORT_VERSION@</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>LSEnvironment</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/opt/qt@5/bin:/Users/leonardfranz/.anaconda/bin:/Users/leonardfranz/.anaconda/condabin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Ghostty.app/Contents/MacOS:/opt/homebrew/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/Users/leonardfranz/anaconda3/bin:/Users/leonardfranz/.cargo/bin:/Users/leonardfranz/.juliaup/bin:/opt/homebrew/bin</string>
+	</dict>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.15</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
 </dict>
 </plist>
