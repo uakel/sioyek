@@ -120,6 +120,7 @@ extern float HIGHLIGHT_DELETE_THRESHOLD;
 extern std::wstring DEFAULT_OPEN_FILE_PATH;
 extern std::wstring STATUS_BAR_FORMAT;
 extern bool INVERTED_HORIZONTAL_SCROLLING;
+extern float HORIZONTAL_SCROLL_ANGLE_THRESHOLD;
 extern bool TOC_JUMP_ALIGN_TOP;
 extern float KEYBOARD_SELECT_BACKGROUND_COLOR[4];
 extern float KEYBOARD_SELECT_TEXT_COLOR[4];
@@ -457,6 +458,7 @@ ConfigManager::ConfigManager(const Path& default_path, const Path& auto_path ,co
 	configs.push_back({ L"default_open_file_path", &DEFAULT_OPEN_FILE_PATH, path_serializer, path_deserializer, nullptr });
 	configs.push_back({ L"status_bar_format", &STATUS_BAR_FORMAT, string_serializer, string_deserializer, nullptr });
 	configs.push_back({ L"inverted_horizontal_scrolling", &INVERTED_HORIZONTAL_SCROLLING, bool_serializer, bool_deserializer, bool_validator });
+	configs.push_back({ L"horizontal_scroll_angle_threshold", &HORIZONTAL_SCROLL_ANGLE_THRESHOLD, float_serializer, float_deserializer, nullptr });
 	configs.push_back({ L"toc_jump_align_top", &TOC_JUMP_ALIGN_TOP, bool_serializer, bool_deserializer, bool_validator });
 	configs.push_back({ L"keyboard_select_background_color", &KEYBOARD_SELECT_BACKGROUND_COLOR, vec4_serializer, vec4_deserializer, nullptr });
 	configs.push_back({ L"keyboard_select_text_color", &KEYBOARD_SELECT_TEXT_COLOR, vec4_serializer, vec4_deserializer, nullptr });

@@ -127,6 +127,7 @@ extern bool SHOULD_HIGHLIGHT_LINKS;
 extern float SCROLL_VIEW_SENSITIVITY;
 extern std::wstring STATUS_BAR_FORMAT;
 extern bool INVERTED_HORIZONTAL_SCROLLING;
+extern float HORIZONTAL_SCROLL_ANGLE_THRESHOLD;
 extern bool TOC_JUMP_ALIGN_TOP;
 extern bool AUTOCENTER_VISUAL_SCROLL;
 extern bool ALPHABETIC_LINK_TAGS;
@@ -1847,25 +1848,38 @@ void MainWidget::wheelEvent(QWheelEvent* wevent) {
     }
 
     // General scrolling (works with or without modifiers, but no zoom/gestures with modifiers)
-    // Main document scrolling
-    if (std::abs(delta_y) > 0.01f) {  // Vertical scrolling
-        if (is_visual_mark_mode) {
-            if (delta_y > 0) {
-                command = command_manager->get_command_with_name("move_visual_mark_up");
-            } else {
-                command = command_manager->get_command_with_name("move_visual_mark_down");
-            }
-        } else {
-            move_vertical(-72.0f * move_y);
-            update_scrollbar();
-            return;
-        }
-    }
+    // Enhanced angle-based scrolling detection (like macOS Preview)
+    float total_magnitude = std::sqrt(delta_x * delta_x + delta_y * delta_y);
     
-    // Enhanced horizontal scrolling support (for diagonal trackpad movements)
-    if (std::abs(delta_x) > 0.01f) {  // Horizontal scrolling
-        move_horizontal(-72.0f * move_x);
-        return;
+    if (total_magnitude > 0.01f) {
+        // Calculate the angle of the gesture in degrees
+        float angle_radians = std::atan2(std::abs(delta_x), std::abs(delta_y));
+        float angle_degrees = angle_radians * 180.0f / M_PI;
+        
+        // Wider horizontal detection range (like macOS Preview)
+        // Horizontal if angle is > threshold degrees from vertical (configurable)
+        bool is_primarily_horizontal = angle_degrees > HORIZONTAL_SCROLL_ANGLE_THRESHOLD;
+        
+        if (is_primarily_horizontal) {
+            // Treat as horizontal scrolling (even with some vertical component)
+            move_horizontal(-72.0f * move_x);
+            return;
+        } else {
+            // Treat as vertical scrolling
+            if (std::abs(delta_y) > 0.01f) {
+                if (is_visual_mark_mode) {
+                    if (delta_y > 0) {
+                        command = command_manager->get_command_with_name("move_visual_mark_up");
+                    } else {
+                        command = command_manager->get_command_with_name("move_visual_mark_down");
+                    }
+                } else {
+                    move_vertical(-72.0f * move_y);
+                    update_scrollbar();
+                    return;
+                }
+            }
+        }
     }
 
     // Note: Zoom is intentionally disabled when ANY modifier is pressed as requested
