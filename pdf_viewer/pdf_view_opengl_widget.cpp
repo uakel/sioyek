@@ -407,6 +407,9 @@ PdfViewOpenGLWidget::PdfViewOpenGLWidget(DocumentView* document_view, PdfRendere
 
 	overview_offset_x = OVERVIEW_OFFSET[0];
 	overview_offset_y = OVERVIEW_OFFSET[1];
+	
+	// Initialize DPI tracking
+	check_and_update_dpi();
 }
 
 void PdfViewOpenGLWidget::cancel_search() {
@@ -661,15 +664,10 @@ void PdfViewOpenGLWidget::render_page(int page_number) {
 		document_view->get_document()->get_page_width(page_number),
 		document_view->get_document()->get_page_height(page_number) };
 
-#ifdef SIOYEK_QT6
-	float device_pixel_ratio = static_cast<float>(QGuiApplication::primaryScreen()->devicePixelRatio());
-#else
-	float device_pixel_ratio = QApplication::desktop()->devicePixelRatioF();
-#endif
-
-	if (DISPLAY_RESOLUTION_SCALE > 0) {
-		device_pixel_ratio *= DISPLAY_RESOLUTION_SCALE;
-	}
+	// Check for DPI changes and update renderer if necessary
+	check_and_update_dpi();
+	
+	float device_pixel_ratio = current_device_pixel_ratio;
 
 	fz_rect window_rect = document_view->document_to_window_rect_pixel_perfect(page_number,
 		page_rect,
@@ -1935,4 +1933,39 @@ void PdfViewOpenGLWidget::get_background_color(float out_background[3]) {
 void PdfViewOpenGLWidget::clear_all_selections() {
 	cancel_search();
 	document_view->selected_character_rects.clear();
+}
+
+void PdfViewOpenGLWidget::check_and_update_dpi() {
+	float new_device_pixel_ratio;
+	
+#ifdef SIOYEK_QT6
+	// Get the current screen's DPI instead of always using primary screen
+	QScreen* current_screen = window()->windowHandle() ? window()->windowHandle()->screen() : QGuiApplication::primaryScreen();
+	new_device_pixel_ratio = static_cast<float>(current_screen->devicePixelRatio());
+#else
+	// For Qt5, get the screen where this widget is currently displayed
+	QDesktopWidget* desktop = QApplication::desktop();
+	int screen_number = desktop->screenNumber(this);
+	
+	// In Qt5, we can get per-screen DPI using QApplication::screens()
+	QList<QScreen*> screens = QGuiApplication::screens();
+	if (screen_number >= 0 && screen_number < screens.size()) {
+		new_device_pixel_ratio = static_cast<float>(screens[screen_number]->devicePixelRatio());
+	} else {
+		// Fallback to desktop device pixel ratio
+		new_device_pixel_ratio = desktop->devicePixelRatioF();
+	}
+#endif
+
+	if (DISPLAY_RESOLUTION_SCALE > 0) {
+		new_device_pixel_ratio *= DISPLAY_RESOLUTION_SCALE;
+	}
+	
+	// If DPI has changed, update the renderer and cache our new value
+	if (std::abs(new_device_pixel_ratio - current_device_pixel_ratio) > 0.01f) {
+		current_device_pixel_ratio = new_device_pixel_ratio;
+		if (pdf_renderer) {
+			pdf_renderer->update_display_scale(current_device_pixel_ratio);
+		}
+	}
 }

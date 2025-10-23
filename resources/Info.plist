@@ -34,7 +34,7 @@
 	<key>LSEnvironment</key>
 	<dict>
 		<key>PATH</key>
-		<string>/opt/homebrew/opt/qt@5/bin:/Users/leonardfranz/.anaconda/bin:/Users/leonardfranz/.anaconda/condabin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Ghostty.app/Contents/MacOS:/opt/homebrew/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/Users/leonardfranz/anaconda3/bin:/Users/leonardfranz/.cargo/bin:/Users/leonardfranz/.juliaup/bin:/opt/homebrew/bin</string>
+		<string>/Users/leonardfranz/.anaconda/bin:/Users/leonardfranz/.anaconda/condabin:/usr/bin:/bin:/usr/sbin:/sbin:/Applications/Ghostty.app/Contents/MacOS:/opt/homebrew/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/usr/local/bin:/Users/leonardfranz/.local/bin:/Users/leonardfranz/anaconda3/bin:/Users/leonardfranz/.cargo/bin:/Users/leonardfranz/.juliaup/bin:/opt/homebrew/bin</string>
 	</dict>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.15</string>

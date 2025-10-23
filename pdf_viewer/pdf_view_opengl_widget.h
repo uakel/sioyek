@@ -40,6 +40,7 @@
 #endif
 
 #include <qpainter.h>
+#include <qscreen.h>
 
 #include "document_view.h"
 #include "path.h"
@@ -135,6 +136,9 @@ private:
 	bool is_dragging = false;
 	bool fastread_mode = false;
 
+	// Track current screen DPI for dynamic updates
+	float current_device_pixel_ratio = 1.0f;
+
 	int last_mouse_down_window_x = 0;
 	int last_mouse_down_window_y = 0;
 
@@ -157,6 +161,7 @@ private:
 	std::optional<fz_rect> selected_rectangle = {};
 
 	GLuint LoadShaders(Path vertex_file_path_, Path fragment_file_path_);
+	void check_and_update_dpi();
 protected: 
 	void initializeGL() override;
 	void resizeGL(int w, int h) override;

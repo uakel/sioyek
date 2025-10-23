@@ -1850,13 +1850,15 @@ void MainWidget::wheelEvent(QWheelEvent* wevent) {
     // General scrolling (works with or without modifiers, but no zoom/gestures with modifiers)
     // Enhanced vertical band + direct tracking system
     float total_magnitude = std::sqrt(delta_x * delta_x + delta_y * delta_y);
-    
+    float angle = std::atan2(std::abs(delta_y), delta_x) * 360.0f / (2.0f * M_PI);
+
     if (total_magnitude > 0.01f) {
         // Check if horizontal movement escapes the vertical band
         // Use configurable band width (default allows some horizontal drift)
-        bool escapes_vertical_band = std::abs(delta_x) > HORIZONTAL_SCROLL_BAND_WIDTH;
-        
-        if (escapes_vertical_band) {
+        bool scroll2d = std::abs(delta_x) > HORIZONTAL_SCROLL_BAND_WIDTH;
+        scroll2d = (angle < 60.0f || angle > -60.0f) && scroll2d;
+
+        if (scroll2d) {
             // Direct 1:1 finger tracking mode - exact diagonal movement
             if (std::abs(delta_x) > 0.01f) {
                 move_horizontal(-72.0f * move_x);
